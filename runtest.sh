@@ -1,1 +1,1 @@
-python debogus.py -f attachment -s 404350 -e 404AD5
+python debogus.py -f test -s 404350 -e 404AD5
