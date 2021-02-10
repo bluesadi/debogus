@@ -62,6 +62,7 @@ class Deboguser:
         outpath = name + '_recovered' + suffix
         with open(outpath,'wb') as out:
             out.write(data)
+        print(f'Patched {len(patched_addrs)} unreachable blocks: {patched_addrs}')
         print(f'Recovered file is saved to: {outpath}')
 
     def deobfu(self):
