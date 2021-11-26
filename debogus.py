@@ -1,6 +1,7 @@
 import angr
 import argparse
 import logging
+import os
 
 def patch_jmp(block, jmp_addr):
     insn = block.capstone.insns[-1]
@@ -54,6 +55,7 @@ if __name__ == '__main__':
     # Do deobfuscation on target function
     deobfu_func(func_addr=start)
     # Write the recovered binary file to ${file}_recovered
-    with open(args.file + '_recovered', 'wb') as file:
+    fname, ext = os.path.splitext(args.file)
+    with open(fname + '_recovered' + ext, 'wb') as file:
         file.write(binfile)
     print('Deobfuscation success!')
