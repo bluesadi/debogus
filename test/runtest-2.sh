@@ -1,1 +1,0 @@
-python debogus.py -f test/test-2 -s 401150 -e 405C8E
