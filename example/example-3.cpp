@@ -1,4 +1,7 @@
 #include <cstdio>
+#define LL long long
+
+
 
 int main(){
     int a;

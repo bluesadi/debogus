@@ -1,23 +1,41 @@
 import angr
+from angrmanagement.utils.graph import to_supergraph
 import argparse
 import logging
 import os
 
-def patch_jmp(block, jmp_addr):
-    insn = block.capstone.insns[-1]
-    offset = insn.address - proj.loader.main_object.mapped_base
-    # Nop original jx/jnx instruction
-    binfile[offset : offset + insn.size] = b'\x90' * insn.size     
-    # Patch jmp instruction that jumps to the real successor
-    binfile[offset : offset + 5] = b'\xE9' + (jmp_addr - (insn.address + 5)).to_bytes(4, 'little', signed=True)
-    print('Patch [%s\t%s] at %#x' % (insn.mnemonic, insn.op_str, insn.address))
+# def patch_jmp(block, jmp_addr):
+#     insn = block.capstone.insns[-1]
+#     offset = insn.address - proj.loader.main_object.mapped_base
+#     # Nop original jx/jnx instruction
+#     binfile[offset : offset + insn.size] = b'\x90' * insn.size     
+#     # Patch jmp instruction that jumps to the real successor
+#     binfile[offset : offset + 5] = b'\xE9' + (jmp_addr - (insn.address + 5)).to_bytes(4, 'little', signed=True)
+#     print('Patch [%s\t%s] at %#x' % (insn.mnemonic, insn.op_str, insn.address))
+    
+def patch_nops(block):
+    offset = block.addr - proj.loader.main_object.mapped_base
+    binfile[offset : offset + block.size] = b'\x90' * block.size
+    print('Patch nop at block %#x' % block.addr)
+
+def get_cfg(func_addr):
+    cfg = proj.analyses.CFGFast(normalize=True, force_complete_scan=False)
+    function_cfg = cfg.functions.get(func_addr).transition_graph
+    super_cfg = to_supergraph(function_cfg)
+    return super_cfg
 
 def deobfu_func(func_addr):
+    blocks = set()
+    cfg = get_cfg(func_addr)
+    for node in cfg.nodes:
+        blocks.add(node.addr)
+    print([hex(b) for b in blocks])
     # Symbolic execution
     state = proj.factory.blank_state(addr=func_addr)
     simgr = proj.factory.simgr(state)
     while len(simgr.active):
         for active in simgr.active:
+            blocks.discard(active.addr)
             # hook call instructions
             block = proj.factory.block(active.addr)
             for insn in block.capstone.insns:
@@ -25,13 +43,9 @@ def deobfu_func(func_addr):
                     next_func_addr = int(insn.op_str, 16)
                     proj.hook(next_func_addr, angr.SIM_PROCEDURES["stubs"]["ReturnUnconstrained"](), replace=True)
                     print('Hook [%s\t%s] at %#x' % (insn.mnemonic, insn.op_str, insn.address))
-            succ = active.step()
-            sat = succ.successors
-            unsat = succ.unsat_successors
-            if len(sat) == 1 and len(unsat) > 0:
-                sat_addr = sat[0].addr
-                patch_jmp(block, sat_addr)
         simgr.step()
+    for block_addr in blocks:
+        patch_nops(proj.factory.block(block_addr))
 
 if __name__ == '__main__':
     # Disable warning
