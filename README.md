@@ -1,5 +1,5 @@
 # debogus
-利用angr符号执行去除虚假控制流
+Deobfuscate OLLVM Bogus Control Flow with angr
 ## Usage
 ```
 python debogus.py [-h] [-f FILE] [-s START]
